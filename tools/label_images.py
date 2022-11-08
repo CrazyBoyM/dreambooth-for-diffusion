@@ -119,7 +119,7 @@ if __name__ == "__main__":
     model_path:str
     if args.model_path == "":
         script_path = os.path.realpath(__file__)
-        default_model_path = os.path.join(os.path.dirname(script_path), "models")
+        default_model_path = os.path.join(os.path.dirname(script_path), "deepdanbooru-models")
         # print("No model path specified, using default model path: {}".format(default_model_path))
         model_path = default_model_path
     else:
