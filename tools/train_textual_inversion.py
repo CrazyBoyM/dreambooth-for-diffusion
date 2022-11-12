@@ -1,5 +1,3 @@
-# 这是另一种finetune模型的方法，名为textual inversion，效果一般，仅内置一份供参考。
-# 提示：该方法训练出的概念编码只能在diffusers使用。
 import argparse
 import itertools
 import math
@@ -9,7 +7,8 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-import torch
+# import torch
+import oneflow as torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
 from torch.utils.data import Dataset
@@ -31,15 +30,11 @@ from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTokenizer
 logger = get_logger(__name__)
 
 
-def save_progress(text_encoder, placeholder_token_id, accelerator, args, steps=0):
+def save_progress(text_encoder, placeholder_token_id, accelerator, args):
     logger.info("Saving embeddings")
-    backup_path = Path(args.output_dir) / "backup"
-    if not backup_path.exists():
-        backup_path.mkdir()
     learned_embeds = accelerator.unwrap_model(text_encoder).get_input_embeddings().weight[placeholder_token_id]
     learned_embeds_dict = {args.placeholder_token: learned_embeds.detach().cpu()}
     torch.save(learned_embeds_dict, os.path.join(args.output_dir, "learned_embeds.bin"))
-    torch.save(learned_embeds_dict, os.path.join(backup_path, f"learned_embeds-{steps}.bin"))
 
 
 def parse_args():
@@ -528,8 +523,6 @@ def main():
                 # else:
                 #     grads = text_encoder.get_input_embeddings().weight.grad
                 grads = text_encoder.module.get_input_embeddings().weight.grad
-                
-                print('###:', grads)
                 # Get the index for tokens that we want to zero the grads for
                 index_grads_to_zero = torch.arange(len(tokenizer)) != placeholder_token_id
                 grads.data[index_grads_to_zero, :] = grads.data[index_grads_to_zero, :].fill_(0)
@@ -543,8 +536,7 @@ def main():
                 progress_bar.update(1)
                 global_step += 1
                 if global_step % args.save_steps == 0:
-                    
-                    save_progress(text_encoder, placeholder_token_id, accelerator, args, global_step)
+                    save_progress(text_encoder, placeholder_token_id, accelerator, args)
 
             logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
             progress_bar.set_postfix(**logs)
@@ -568,7 +560,7 @@ def main():
         )
         pipeline.save_pretrained(args.output_dir)
         # Also save the newly trained embeddings
-        save_progress(text_encoder, placeholder_token_id, accelerator, args, global_step)
+        save_progress(text_encoder, placeholder_token_id, accelerator, args)
 
         if args.push_to_hub:
             repo.push_to_hub(commit_message="End of training", blocking=False, auto_lfs_prune=True)

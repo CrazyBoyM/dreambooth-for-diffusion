@@ -1,13 +1,13 @@
+# 主要用于训练风格、作画能力（需要每张图片都有对应的标签描述）
 export MODEL_NAME="./model"
 export INSTANCE_DIR="./datasets/test2"
 export OUTPUT_DIR="./new_model"
 export LOG_DIR="/root/tf-logs"
+export TEST_PROMPTS_FILE="./test_prompts_style.txt"
 
 rm -rf $LOG_DIR/*
-# tensorboard --logdir=$LOG_DIR/dreambooth --port=6007 & #系统默认启动了tensorboard，如果没有可以手动启动
 
 accelerate launch tools/train_dreambooth.py \
-  --train_text_encoder \
   --pretrained_model_name_or_path=$MODEL_NAME  \
   --mixed_precision="fp16" \
   --instance_data_dir=$INSTANCE_DIR \
@@ -15,17 +15,19 @@ accelerate launch tools/train_dreambooth.py \
   --output_dir=$OUTPUT_DIR \
   --logging_dir=$LOG_DIR \
   --center_crop \
-  --resolution=512 \
+  --resolution=768 \
   --train_batch_size=1 \
-  --gradient_accumulation_steps=1 --gradient_checkpointing \
   --use_8bit_adam \
+  --gradient_accumulation_steps=1 --gradient_checkpointing \
   --learning_rate=2e-6 \
   --lr_scheduler="constant" \
   --lr_warmup_steps=0 \
-  --num_class_images=200 \
   --max_train_steps=1000 \
-  --save_model_every_n_steps=300
-
+  --save_model_every_n_steps=500 \
+  --auto_test_model \
+  --test_prompts_file=$TEST_PROMPTS_FILE \
+  --test_seed=123 \
+  --test_num_per_prompt=3
   
 # 如果max_train_steps改大了，请记得把save_model_every_n_steps也改大，不然磁盘容易中间就满了
 
@@ -52,3 +54,9 @@ accelerate launch tools/train_dreambooth.py \
 # 训练的最大步数，一般是1000，如果你的数据集比较大，那么可以适当增大该值
 # - save_model_every_n_steps
 # 每多少步保存一次模型，方便查看中间训练的结果找出最优的模型，也可以用于断点续训
+
+# --train_text_encoder # 除了图像生成器，也训练文本编码器
+
+# --auto_test_model, --test_prompts_file, --test_seed, --test_num_per_prompt
+# 分别是自动测试模型（每save_model_every_n_steps步后）、测试的文本、随机种子、每个文本测试的次数
+# 测试的样本图片会保存在模型输出目录下的test文件夹中

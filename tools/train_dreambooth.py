@@ -208,7 +208,13 @@ def parse_args(input_args=None):
     )
     parser.add_argument("--local_rank", type=int, default=-1, help="For distributed training: local_rank")
     parser.add_argument("--save_model_every_n_steps", type=int)
-
+    parser.add_argument("--auto_test_model", action="store_true", help="Whether or not to automatically test the model after saving it")
+    parser.add_argument("--test_prompt", type=str, default="A photo of a cat", help="The prompt to use for testing the model.")
+    parser.add_argument("--test_prompts_file", type=str, default=None, help="The file containing the prompts to use for testing the model.example: test_prompts.txt, each line is a prompt")
+    parser.add_argument("--test_negative_prompt", type=str, default="", help="The negative prompt to use for testing the model.")
+    parser.add_argument("--test_seed", type=int, default=42, help="The seed to use for testing the model.")
+    parser.add_argument("--test_num_per_prompt", type=int, default=1, help="The number of images to generate per prompt.")
+    
     if input_args is not None:
         args = parser.parse_args(input_args)
     else:
@@ -267,7 +273,7 @@ class DreamBoothDataset(Dataset):
         if not self.instance_data_root.exists():
             raise ValueError("Instance images root doesn't exists.")
 
-        self.instance_images_path = list(self.instance_data_root.glob("*.jpg")) + list(self.instance_data_root.glob("*.png")) # get all the images in the instance data root
+        self.instance_images_path = list(self.instance_data_root.glob("*.jpg")) + list(self.instance_data_root.glob("*.png"))
         self.num_instance_images = len(self.instance_images_path)
         self.instance_prompt = instance_prompt
         self.use_filename_as_label = use_filename_as_label
@@ -277,7 +283,7 @@ class DreamBoothDataset(Dataset):
         if class_data_root is not None:
             self.class_data_root = Path(class_data_root)
             self.class_data_root.mkdir(parents=True, exist_ok=True)
-            self.class_images_path = list(self.class_data_root.iterdir())
+            self.class_images_path = list(self.class_data_root.glob("*.jpg")) + list(self.class_data_root.glob("*.png"))
             self.num_class_images = len(self.class_images_path)
             self._length = max(self.num_class_images, self.num_instance_images)
             self.class_prompt = class_prompt
@@ -356,9 +362,62 @@ def get_full_repo_name(model_id: str, organization: Optional[str] = None, token:
     else:
         return f"{organization}/{model_id}"
 
+def test_model(folder, args):
+    if args.test_prompts_file is not None:
+        with open(args.test_prompts_file, "r") as f:
+            prompts = f.read().splitlines()
+    else:
+        prompts = [args.test_prompt]
+    
+    test_path = os.path.join(folder, "test")
+    if not os.path.exists(test_path):
+        os.makedirs(test_path)
+    
+    print("Testing the model...")
+    from diffusers import DDIMScheduler
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch_dtype = torch.float16 if device.type == "cuda" else torch.float32
+    pipeline = StableDiffusionPipeline.from_pretrained(
+        folder,
+        torch_dtype=torch_dtype,
+        safety_checker=None,
+        load_in_8bit=True,
+        scheduler = DDIMScheduler(
+            beta_start=0.00085,
+            beta_end=0.012,
+            beta_schedule="scaled_linear",
+            clip_sample=False,
+            set_alpha_to_one=False,
+        ),
+    )
+    pipeline.set_progress_bar_config(disable=True)
+    pipeline.enable_attention_slicing()
+    pipeline = pipeline.to(device)
+
+    torch.manual_seed(args.test_seed)
+    with torch.autocast('cuda'): 
+        for prompt in prompts:
+            print(f"Generating test images for prompt: {prompt}")
+            test_images = pipeline(
+                prompt=prompt,
+                negative_prompt=args.test_negative_prompt,
+                num_inference_steps=30, 
+                num_images_per_prompt=args.test_num_per_prompt,
+            ).images
+            
+            for index, image in enumerate(test_images):
+                image.save(f"{test_path}/{prompt}_{index}.png")
+    
+    del pipeline
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        
+    print(f"Test completed.The examples are saved in {test_path}")
+
 
 def save_model(accelerator, unet, text_encoder, args, step=None):
-    unet = accelerator.unwrap_model(unet)
+    unet = accelerator.unwrap_model(unet) 
     text_encoder = accelerator.unwrap_model(text_encoder)
 
     if step == None:
@@ -378,6 +437,13 @@ def save_model(accelerator, unet, text_encoder, args, step=None):
             revision=args.revision,
         )
         pipeline.save_pretrained(folder)
+        del pipeline
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        if args.auto_test_model:
+            print("Testing Model...")
+            test_model(folder, args)
 
         if args.push_to_hub:
             repo.push_to_hub(commit_message="End of training", blocking=False, auto_lfs_prune=True)

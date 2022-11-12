@@ -1,0 +1,17 @@
+__pycache__
+.ipynb_checkpoints
+*/.ipynb_checkpoints
+*.ckpt
+*.pt
+*.whl
+*.log
+*.png
+*.jpg
+nohup.out
+/datasets
+/model
+/new-*
+/log
+/output*
+/tools/deepdanbooru-models/*
+/tools/diffusers-models/*

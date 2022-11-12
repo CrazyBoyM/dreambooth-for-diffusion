@@ -13,12 +13,14 @@ pipe = StableDiffusionPipeline.from_pretrained(
             beta_schedule="scaled_linear",
             clip_sample=False,
             set_alpha_to_one=True,
-        )
+        ),
+        safety_checker=None
     )
 
-def dummy(images, **kwargs):
-    return images, False
-pipe.safety_checker = dummy
+# def dummy(images, **kwargs):
+#     return images, False
+# pipe.safety_checker = dummy
 pipe = pipe.to("cuda")
-image = pipe(prompt, num_inference_steps=30).images[0]  
-image.save(f"output.png")
+images = pipe(prompt, num_inference_steps=30, num_images_per_prompt=3).images
+for i, image in enumerate(images):
+    image.save(f"test-{i}.png")

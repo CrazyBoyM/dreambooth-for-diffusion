@@ -30,15 +30,30 @@ cd /root/autodl-tmp/dreambooth-for-diffusion
 已经内置了两个基础模型，可以根据自己数据集的特性选择。    
 - sd_1-5.ckpt是偏真实风格  
 - nd_lastest.ckpt是偏二次元风格  
-开始转换：
+开始转换二次元模型：
 ```
-python tools/ckpt2diffusers.py ./ckpt_models/sd_1-5.ckpt ./model 
+# 该步需要运行大约一分钟 
+!python tools/ckpt2diffusers.py \
+    --checkpoint_path=./ckpt_models/nd_lastest.ckpt \
+    --dump_path=./model \
+    --vae_path=./ckpt_models/animevae.pt \
+    --original_config_file=./ckpt_models/model.yaml \
+    --scheduler_type="ddim"
+```
+转换写实风格模型：
+```
+# 该步需要运行大约一分钟 
+!python tools/ckpt2diffusers.py \
+    --checkpoint_path=./ckpt_models/sd_1-5.ckpt \
+    --dump_path=./model \
+    --original_config_file=./ckpt_models/model.yaml \
+    --scheduler_type="ddim"
 ```
 这里后面跟的两个文件分别是你的ckpt文件和转换后的输出路径。
 
 ## 转换diffusers官方权重为ckpt检查点文件
 ```
-python tools/diffusers2ckpt.py ./model ./ckpt_models/newModel_half.ckpt --half
+python tools/diffusers2ckpt.py ./new_model ./ckpt_models/newModel_half.ckpt --half
 ```
 如需保存为float16版精度，添加--half参数，权重大小会减半。
 
