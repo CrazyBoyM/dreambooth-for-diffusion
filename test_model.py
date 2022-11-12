@@ -7,6 +7,7 @@ prompt = "a cute girl, blue eyes, brown hair"
 
 pipe = StableDiffusionPipeline.from_pretrained(
         model_path, 
+        torch_dtype=torch.float16,
         scheduler=DDIMScheduler(
             beta_start=0.00085,
             beta_end=0.012,
