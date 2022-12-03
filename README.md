@@ -2,10 +2,10 @@
 如果你是在autodl上的机器可以直接使用封装好的镜像创建实例，开箱即用  
 如果是本地或者其他服务器上也可以使用，需要手动安装一些pip包
 
-## 运行
+## 如何运行
 直接在autodl使用镜像运行：https://www.codewithgpu.com/i/CrazyBoyM/dreambooth-for-diffusion/dreambooth-for-diffusion  
 
-如果你不熟悉notebook代码的训练方式，也可以直接使用封装好的webui在线镜像：  
+如果你不熟悉notebook代码的训练方式，也可以直接使用封装好的webui在线镜像（含稳定Dreambooth、dreamArtist训练插件，已fix）：  
 https://www.codewithgpu.com/i/CrazyBoyM/sd_dreambooth_extension_webui/dreambooth-dreamartist-for-webui
 
 ## 注意
