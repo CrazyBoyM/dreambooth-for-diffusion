@@ -401,6 +401,8 @@ def test_model(folder, args):
             print(f"Generating test images for prompt: {prompt}")
             test_images = pipeline(
                 prompt=prompt,
+                width=512,
+                height=512,
                 negative_prompt=args.test_negative_prompt,
                 num_inference_steps=30, 
                 num_images_per_prompt=args.test_num_per_prompt,
