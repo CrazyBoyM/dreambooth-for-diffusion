@@ -4,6 +4,7 @@ from diffusers import DDIMScheduler
 
 model_path = "./new_model"  
 prompt = "a cute girl, blue eyes, brown hair"
+torch.manual_seed(123123123)
 
 pipe = StableDiffusionPipeline.from_pretrained(
         model_path, 
