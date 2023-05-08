@@ -51,32 +51,51 @@ if __name__ == '__main__':
         os.makedirs(save_path)
     else:
         print('The folder already exists, please check the path.')
-    
-    # 只读取png、jpg、jpeg、bmp、webp格式
-    allow_suffix = ['png', 'jpg', 'jpeg', 'bmp', 'webp']
-    image_list = os.listdir(path)
-    image_list = [os.path.join(path, image) for image in image_list if image.split('.')[-1] in allow_suffix]
-    
-    for file, i in zip(image_list, range(1, len(image_list)+1)):
-        print('Processing image: %s' % file)
-        try:
-            img = cv2.imread(file, -1)
-            
-            # 对图像进行center crop, 保证图像的长宽比为1:1, crop_size为图像的较短边
+
+# 只读取png、jpg、jpeg、bmp、webp格式
+allow_suffix = ['png', 'jpg', 'jpeg', 'bmp', 'webp']
+image_list = os.listdir(path)
+image_list = [os.path.join(path, image) for image in image_list if image.split('.')[-1] in allow_suffix]
+
+width = args.width
+height = args.height
+ratio = 3 / 2
+for file, i in zip(image_list, range(1, len(image_list)+1)):
+    print('Processing image: %s' % file)
+    try:
+        img = cv2.imread(file)
+        if width==height:
+           # 对图像进行center crop, 保证图像的长宽比为1:1, crop_size为图像的较短边
             crop_size = min(img.shape[:2])
             img = center_crop(img, (crop_size, crop_size))
+        else:
+            height, width, _ = img.shape
+            # 如果宽度大于高度，则裁剪成3:2的宽高比
+            if width > height:
+                new_width = width
+                new_height = int(width / ratio)
+                left = 0
+                top = 0
+                img = img[top:top+new_height, left:left+new_width]
+            else:
+                # 反之，则裁剪成2:3的宽高比
+                new_height = height
+                new_width = int(height * ratio)
+                left = 0
+                top = 0
+                img = img[top:top+new_height, left:left+new_width]
+        
+        # 缩放图像
+        width = args.width
+        height = args.height
+        img = cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
+        
+        # 如果是透明图，将透明背景转换为白色或者黑色
+        if args.png:
+            img = transparence2black(img)
             
-            # 缩放图像到512*512
-            width = args.width
-            height = args.height
-            img = cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
-            
-            # 如果是透明图，将透明背景转换为白色或者黑色
-            if args.png:
-                img = transparence2black(img)
-                
-            cv2.imwrite(os.path.join(save_path, str(i).zfill(4) + ".jpg"), img)
-        except Exception as e:
-            print(e)
-            os.remove(path+file) # 删除无效图片
-            print("删除无效图片: " + path+file)
+        cv2.imwrite(os.path.join(save_path, str(i).zfill(4) + ".jpg"), img)
+    except Exception as e:
+        print(e)
+        os.remove(path+file) # 删除无效图片
+        print("删除无效图片: " + path+file)
