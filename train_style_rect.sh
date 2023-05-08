@@ -1,13 +1,13 @@
 # 主要用于训练风格、作画能力（需要每张图片都有对应的标签描述）[矩形输入图片]
 export MODEL_NAME="./model"
-export INSTANCE_DIR="./datasets/test2"
+export INSTANCE_DIR="./datasets/a1"
 export OUTPUT_DIR="./new_model"
 export LOG_DIR="/root/tf-logs"
 export TEST_PROMPTS_FILE="./test_prompts_style.txt"
 
 rm -rf $LOG_DIR/*
 
-accelerate launch tools/train_dreambooth.py \
+accelerate launch tools/train_dreambooth_rect.py \
   --pretrained_model_name_or_path=$MODEL_NAME  \
   --mixed_precision="fp16" \
   --instance_data_dir=$INSTANCE_DIR \
