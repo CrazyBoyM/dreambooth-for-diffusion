@@ -69,10 +69,22 @@ python tools/diffusers2ckpt.py ./new_model ./ckpt_models/newModel_half.ckpt --ha
 我在tools/handle_images.py中提供了一份批量处理的代码用于参考  
 自动center crop图像，并缩放尺寸
 ```
-python tools/handle_images.py ./datasets/test ./datasets/test2 --width=512 --height=512
+!python tools/handle_images.py --origin_image_path  ./datasets/test \
+                --output_image_path ./datasets/test2 \
+                --width=512 --height=512
 ```
 test为未处理的原始图像文件夹，test2为输出处理图像的路径  
 如需处理透明背景png图为黑色/白色底jpg，可以添加--png参数。
+
+### 图像裁剪为3:2 && 2:3的矩形
+不需要修改width和height(输出自动分成两个文件夹)
+```
+!python tools/handle_images.py --origin_image_path  ./datasets/test  \
+                --output_image_path_0 ./datasets/a1 --output_image_path_1 ./datasets/a2 \
+                --width=768 --height=512 
+```
+test为未处理的原始图像文件夹，
+a1，a2为裁剪后输出的两个文件夹，分别保存768x512和512x768的图像。
 
 ### 图像自动标注
 使用deepdanbooru生成tags label.
@@ -107,12 +119,14 @@ accelerate config
 
 ```
 sh train_object.sh
+# sh train_object_rect.sh --width 768 --height 512 #输入为矩形图像 
 ```
 
 如果要Finetune训练自己的大模型： 
 （推荐准备3000+张图片，包含尽可能的多样性，数据决定训练出的模型质量）
 ```
 sh train_style.sh
+# sh train_style_rect.sh --width 768 --height 512 #输入为矩形图像 
 ```
 A5000的训练速度大概8分钟/1000步
 
